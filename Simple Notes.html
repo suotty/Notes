@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Simple Notes</title>
+<style>
+:root{--bg:#f6f5f1;--surface:#fff;--text:#222;--muted:#6b6b66;--border:#dcdad2;--accent:#2f6f5e;--accent-text:#fff;--hover:#ecebe5;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){color-scheme:dark;--bg:#1b1c1a;--surface:#262724;--text:#ececE6;--muted:#9a9a92;--border:#3a3b37;--accent:#5fae98;--accent-text:#10201b;--hover:#32332f}}
+:root[data-theme="dark"]{color-scheme:dark;--bg:#1b1c1a;--surface:#262724;--text:#ececE6;--muted:#9a9a92;--border:#3a3b37;--accent:#5fae98;--accent-text:#10201b;--hover:#32332f}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+html,body{height:100%;margin:0}
+body{background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,"Segoe UI",sans-serif;display:flex;flex-direction:column}
+.app{display:flex;flex-direction:column;height:100%;max-width:960px;width:100%;margin:0 auto;padding:10px;box-sizing:border-box;gap:8px}
+.tabs{display:flex;gap:4px;align-items:flex-end;overflow-x:auto;border-bottom:1px solid var(--border);padding-bottom:0}
+.tab{display:flex;align-items:center;gap:6px;padding:7px 10px;border:1px solid var(--border);border-bottom:none;border-radius:8px 8px 0 0;background:var(--hover);color:var(--muted);cursor:pointer;white-space:nowrap;font-size:14px;max-width:180px}
+.tab span.t{overflow:hidden;text-overflow:ellipsis}
+.tab.active{background:var(--surface);color:var(--text);font-weight:600;margin-bottom:-1px}
+.tab{border-top:4px solid var(--tc,var(--border))}
+.tab[style*="--tc"]{background:color-mix(in srgb,var(--tc) 22%,var(--hover))}
+.tab.active[style*="--tc"]{background:color-mix(in srgb,var(--tc) 28%,var(--surface))}
+.toolbar button.on{background:var(--accent);color:var(--accent-text);border-color:var(--accent)}
+.toolbar #linkSel{max-width:170px}
+.tbtoggle{align-self:flex-start;border:1px solid var(--border);background:none;color:var(--muted);border-radius:6px;padding:3px 10px;font-size:13px;cursor:pointer}
+.tbtoggle:hover{background:var(--hover)}
+#tabbar.hide{display:none}
+#editor ul{margin:.4em 0;padding-left:1.4em}
+.tab input{font:inherit;width:110px;border:1px solid var(--accent);border-radius:4px;background:var(--surface);color:var(--text)}
+.tab .x{border:none;background:none;color:inherit;cursor:pointer;font-size:15px;padding:0 2px;border-radius:4px}
+.tab .x:hover{background:var(--border)}
+.add{border:1px dashed var(--border);background:none;color:var(--muted);border-radius:8px;padding:6px 11px;cursor:pointer;font-size:16px;margin-bottom:3px}
+.toolbar{display:flex;flex-wrap:wrap;gap:6px;align-items:center;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:6px}
+.toolbar button,.toolbar select{height:32px;border:1px solid var(--border);background:var(--surface);color:var(--text);border-radius:6px;font-size:14px;cursor:pointer;min-width:32px;padding:0 8px}
+.toolbar button:hover{background:var(--hover)}
+.toolbar label{display:flex;align-items:center;gap:4px;font-size:13px;color:var(--muted)}
+.toolbar input[type=color]{width:30px;height:30px;padding:0;border:1px solid var(--border);border-radius:6px;background:none;cursor:pointer}
+.sep{width:1px;height:22px;background:var(--border)}
+#editor{flex:1;overflow:auto;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:18px 20px;outline:none;font-family:Calibri,Carlito,'Segoe UI',Arial,sans-serif;font-size:12pt;line-height:1.5}
+#editor:empty::before{content:"Start typing…";color:var(--muted)}
+#status{font-size:12px;color:var(--muted);min-height:16px}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="tabs" id="tabs"></div>
+  <div class="toolbar" id="toolbar">
+    <button data-cmd="bold" title="Bold"><b>B</b></button>
+    <button data-cmd="italic" title="Italic"><i>I</i></button>
+    <button data-cmd="underline" title="Underline"><u>U</u></button>
+    <button data-cmd="strikeThrough" title="Strikethrough"><s>S</s></button>
+    <span class="sep"></span>
+    <label title="Text colour">A<input type="color" id="fore" value="#c0392b"></label>
+    <label title="Highlight">▮<input type="color" id="hilite" value="#ffe066"></label>
+    <span class="sep"></span>
+    <button data-cmd="insertUnorderedList" title="Bullet list">• List</button>
+    <button data-cmd="justifyLeft" title="Align left">⇤</button>
+    <button data-cmd="justifyCenter" title="Center">↔</button>
+    <button data-cmd="removeFormat" title="Clear formatting">Clear</button>
+  </div>
+  <button id="tbToggle" class="tbtoggle" aria-expanded="true">▾ Tab options</button>
+  <div class="toolbar" id="tabbar">
+    <button id="renameBtn" title="Rename this tab (or double-click it)">✎ Rename tab</button>
+    <label title="Tab colour">Tab colour<input type="color" id="tabColor" value="#2f6f5e"></label>
+    <button id="noColor" title="Remove tab colour">No colour</button>
+    <span class="sep"></span>
+    <button id="mainBtn" title="Make this the main tab">★ Main tab</button>
+    <select id="linkSel" title="Insert a link to another note"></select>
+    <button id="indexBtn" title="Add a list of links to all other notes">Add index of notes</button>
+    <button id="backMain" style="display:none">← Back to main</button>
+  </div>
+  <div id="editor" contenteditable="true" spellcheck="true"></div>
+  <div id="status"></div>
+</div>
+
+<script>
+(function(){
+  var KEY='simple-notes-v1';
+  var state={notes:[],active:null};
+  var ed=document.getElementById('editor'), tabsEl=document.getElementById('tabs'), statusEl=document.getElementById('status');
+  var saved=null, timer=null;
+
+  function uid(){return 'n'+Date.now().toString(36)+Math.random().toString(36).slice(2,5)}
+  function load(){
+    try{var s=localStorage.getItem(KEY); if(s){var p=JSON.parse(s); if(p&&p.notes&&p.notes.length){state=p}}}catch(e){}
+    if(!state.notes.length){var n={id:uid(),title:'Note 1',html:''};state.notes.push(n);state.active=n.id}
+    if(!cur())state.active=state.notes[0].id;
+  }
+  function persist(){try{localStorage.setItem(KEY,JSON.stringify(state))}catch(e){}}
+  function cur(){return state.notes.find(function(n){return n.id===state.active})}
+  function say(t){statusEl.textContent=t;clearTimeout(say.t);say.t=setTimeout(function(){statusEl.textContent=''},3500)}
+
+  function commit(){var n=cur();if(n){n.html=ed.innerHTML;persist()}}
+  function renderTabs(){
+    tabsEl.innerHTML='';
+    state.notes.forEach(function(n){
+      var t=document.createElement('div');t.className='tab'+(n.id===state.active?' active':'');
+      var s=document.createElement('span');s.className='t';s.textContent=(n.main?'★ ':'')+n.title;t.appendChild(s);
+      if(n.color)t.style.setProperty('--tc',n.color);
+      t.onclick=function(){switchTo(n.id)};
+      t.ondblclick=function(e){e.stopPropagation();rename(n,t,s)};
+      if(state.notes.length>1){
+        var x=document.createElement('button');x.className='x';x.textContent='×';x.title='Close note';
+        x.onclick=function(e){e.stopPropagation();if(confirm('Delete “'+n.title+'”?'))removeNote(n.id)};
+        t.appendChild(x);
+      }
+      tabsEl.appendChild(t);
+    });
+    var a=document.createElement('button');a.className='add';a.textContent='+';a.title='New note';
+    a.onclick=function(){commit();var n={id:uid(),title:'Note '+(state.notes.length+1),html:''};state.notes.push(n);state.active=n.id;persist();show();ed.focus()};
+    tabsEl.appendChild(a);refreshControls();
+  }
+  function rename(n,t,s){
+    var i=document.createElement('input');i.value=n.title;t.replaceChild(i,s);i.focus();i.select();
+    function done(){n.title=i.value.trim()||n.title;persist();renderTabs()}
+    i.onblur=done;i.onkeydown=function(e){if(e.key==='Enter')i.blur();if(e.key==='Escape'){i.value=n.title;i.blur()}};
+    i.onclick=function(e){e.stopPropagation()};
+  }
+  function switchTo(id){commit();state.active=id;persist();show()}
+  function removeNote(id){
+    var i=state.notes.findIndex(function(n){return n.id===id});state.notes.splice(i,1);
+    if(state.active===id)state.active=state.notes[Math.max(0,i-1)].id;persist();show();
+  }
+  function normalize(){
+    ed.querySelectorAll('[style]').forEach(function(el){el.style.removeProperty('font-size');el.style.removeProperty('font-family')});
+    ed.querySelectorAll('font').forEach(function(f){f.removeAttribute('face');f.removeAttribute('size')});
+  }
+  ed.addEventListener('paste',function(){setTimeout(function(){normalize();commit()},0)});
+  function show(){ed.innerHTML=cur().html;normalize();renderTabs()}
+
+  ed.addEventListener('input',function(){clearTimeout(timer);timer=setTimeout(commit,300)});
+  window.addEventListener('beforeunload',commit);
+
+  /* selection handling so toolbar selects/colour pickers don't lose the selection */
+  document.addEventListener('selectionchange',function(){
+    var s=getSelection();if(s.rangeCount&&ed.contains(s.anchorNode))saved=s.getRangeAt(0).cloneRange();
+  });
+  function restore(){
+    ed.focus();
+    if(saved){var s=getSelection();s.removeAllRanges();s.addRange(saved)}
+  }
+  function exec(c,v){restore();document.execCommand('styleWithCSS',false,true);document.execCommand(c,false,v||null);commit()}
+
+  document.querySelectorAll('[data-cmd]').forEach(function(b){
+    b.addEventListener('mousedown',function(e){e.preventDefault()});
+    b.addEventListener('click',function(){exec(b.dataset.cmd)});
+  });
+  document.getElementById('fore').oninput=function(e){exec('foreColor',e.target.value)};
+  document.getElementById('hilite').oninput=function(e){exec('hiliteColor',e.target.value)};
+
+  function esc(s){var d=document.createElement('div');d.textContent=s;return d.innerHTML}
+
+  /* tab controls, main tab and note links */
+  function $(i){return document.getElementById(i)}
+  function refreshControls(){
+    var n=cur();if(!n)return;
+    $('linkSel').innerHTML='<option value="">🔗 Link to note…</option>'+state.notes.filter(function(x){return x.id!==n.id}).map(function(x){return '<option value="'+x.id+'">'+esc(x.title)+'</option>'}).join('');
+    $('tabColor').value=n.color||'#2f6f5e';
+    $('mainBtn').classList.toggle('on',!!n.main);
+    var m=state.notes.find(function(x){return x.main});
+    $('backMain').style.display=(m&&m.id!==n.id)?'':'none';
+  }
+  function linkHTML(n,txt){return '<a href="#" data-note="'+n.id+'" style="color:#2f6f5e;text-decoration:underline;cursor:pointer">'+esc(txt||n.title)+'</a>'}
+  $('renameBtn').onclick=function(){var t=tabsEl.querySelector('.tab.active');if(t)rename(cur(),t,t.querySelector('.t'))};
+  $('tabColor').oninput=function(e){cur().color=e.target.value;persist();renderTabs()};
+  $('noColor').onclick=function(){delete cur().color;persist();renderTabs()};
+  $('mainBtn').onclick=function(){var n=cur(),was=n.main;state.notes.forEach(function(x){delete x.main});if(!was)n.main=true;persist();renderTabs();say(was?'Main tab cleared.':'This is now your main tab.')};
+  $('backMain').onclick=function(){var m=state.notes.find(function(x){return x.main});if(m)switchTo(m.id)};
+  $('linkSel').onchange=function(e){
+    var t=state.notes.find(function(x){return x.id===e.target.value});e.target.value='';if(!t)return;
+    var sel=saved?saved.toString():'';restore();
+    document.execCommand('insertHTML',false,linkHTML(t,sel)+'&nbsp;');commit();
+  };
+  $('indexBtn').onclick=function(){
+    var o=state.notes.filter(function(x){return x.id!==cur().id});
+    if(!o.length){say('Add more notes first.');return}
+    ed.insertAdjacentHTML('beforeend','<h3>Index</h3><ul>'+o.map(function(x){return '<li>'+linkHTML(x)+'</li>'}).join('')+'</ul><p><br></p>');commit();
+  };
+  ed.addEventListener('click',function(e){
+    var a=e.target.closest&&e.target.closest('[data-note]');if(!a)return;
+    e.preventDefault();var id=a.getAttribute('data-note');
+    if(state.notes.some(function(x){return x.id===id}))switchTo(id);else say('That note no longer exists.');
+  });
+
+  /* collapsible tab options */
+  var TB='simple-notes-tabbar';
+  function setTB(open){
+    $('tabbar').classList.toggle('hide',!open);
+    $('tbToggle').textContent=(open?'▾':'▸')+' Tab options';
+    $('tbToggle').setAttribute('aria-expanded',open);
+    try{localStorage.setItem(TB,open?'1':'0')}catch(e){}
+  }
+  var tbOpen=true;try{tbOpen=localStorage.getItem(TB)!=='0'}catch(e){}
+  $('tbToggle').onclick=function(){setTB($('tabbar').classList.contains('hide'))};
+  setTB(tbOpen);
+
+  /* typing "- " (or "* ") at the start of a line starts a bullet list */
+  ed.addEventListener('keydown',function(e){
+    if(e.key!==' '||e.ctrlKey||e.metaKey||e.altKey)return;
+    var s=getSelection();if(!s.rangeCount||!s.isCollapsed)return;
+    var nd=s.anchorNode,off=s.anchorOffset;
+    if(!nd||nd.nodeType!==3||!ed.contains(nd))return;
+    var before=nd.data.slice(0,off);
+    if(before!=='-'&&before!=='*')return;
+    var p=nd.previousSibling;if(p&&p.nodeName!=='BR')return;
+    if(nd.parentNode&&nd.parentNode.closest('li'))return;
+    e.preventDefault();
+    nd.deleteData(0,1);
+    var r=document.createRange();r.setStart(nd,0);r.collapse(true);s.removeAllRanges();s.addRange(r);
+    document.execCommand('insertUnorderedList');commit();
+  });
+
+  /* Tab / Shift+Tab indents or outdents the current bullet */
+  ed.addEventListener('keydown',function(e){
+    if(e.key!=='Tab'||e.ctrlKey||e.metaKey||e.altKey)return;
+    var s=getSelection();if(!s.rangeCount)return;
+    var n=s.anchorNode,el=n&&(n.nodeType===1?n:n.parentNode);
+    if(!el||!ed.contains(el)||!el.closest('li'))return;
+    e.preventDefault();
+    document.execCommand('styleWithCSS',false,false);
+    document.execCommand(e.shiftKey?'outdent':'indent');
+    commit();
+  });
+
+  load();show();
+})();
+</script>
+</body>
+</html>
